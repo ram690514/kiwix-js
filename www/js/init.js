@@ -22,20 +22,39 @@
  */
 'use strict';
 
+/**
+ * A global parameter object for storing variables that need to be remembered between page loads,
+ * or across different functions and modules
+ * 
+ * @type Object
+ */
+var params = {};
+
+/**
+ * A global object for storing app state
+ * 
+ * @type Object
+ */
+var globalstate = {};
+
 require.config({
     baseUrl: 'js/lib',
     paths: {
         'jquery': 'jquery-3.2.1.slim',
-        'bootstrap': 'bootstrap'
+        'bootstrap': 'bootstrap.bundle',
+        'fontawesome': 'fontawesome/fontawesome',
+        'fontawesome-solid': 'fontawesome/solid'
     },
     shim: {
         'jquery' : {
             exports : '$'
         },
         'bootstrap': {
-            deps: ['jquery']
+            deps: ['jquery', 'fontawesome', 'fontawesome-solid']
         }
     }
 });
 
-requirejs(['bootstrap', '../app']);
+requirejs(['bootstrap'], function (bootstrap) {
+    requirejs(['../app']);
+});

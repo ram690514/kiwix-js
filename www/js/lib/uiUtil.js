@@ -111,36 +111,36 @@ define([], function() {
     /**
      * Displays a Bootstrap warning alert with information about how to access content in a ZIM with unsupported active UI
      */
+    var activeContentWarningSetup = false;
     function displayActiveContentWarning() {
-        // We have to add the alert box in code, because Bootstrap removes it completely from the DOM when the user dismisses it
-        var alertHTML =
-            '<div id="activeContent" class="alert alert-warning alert-dismissible fade in">' +
-                '<a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>' +
-                '<strong>Unable to display active content:</strong> This ZIM is not fully supported in jQuery mode.<br />' +
-                'Content may be available by searching above (type a space or a letter of the alphabet), or else ' +
-                '<a id="swModeLink" href="#contentInjectionModeDiv" class="alert-link">switch to Service Worker mode</a> ' +
-                'if your platform supports it. &nbsp;[<a id="stop" href="#displaySettingsDiv" class="alert-link">Permanently hide</a>]' +
-            '</div>';
-        document.getElementById('alertBoxHeader').innerHTML = alertHTML;
-        ['swModeLink', 'stop'].forEach(function(id) {
-            // Define event listeners for both hyperlinks in alert box: these take the user to the Config tab and highlight
-            // the options that the user needs to select
-            document.getElementById(id).addEventListener('click', function () {
-                var elementID = id === 'stop' ? 'hideActiveContentWarningCheck' : 'serviceworkerModeRadio';
-                var thisLabel = document.getElementById(elementID).parentNode;
-                thisLabel.style.borderColor = 'red';
-                thisLabel.style.borderStyle = 'solid';
-                var btnHome = document.getElementById('btnHome');
-                [thisLabel, btnHome].forEach(function (ele) {
-                    // Define event listeners to cancel the highlighting both on the highlighted element and on the Home tab
-                    ele.addEventListener('mousedown', function () {
-                        thisLabel.style.borderColor = '';
-                        thisLabel.style.borderStyle = '';
-                    });
-                });
-                document.getElementById('btnConfigure').click();
+        var alertActiveContent = document.getElementById('activeContent');
+        alertActiveContent.style.display = 'block';
+        if (!activeContentWarningSetup) {
+            // We are setting up the active content warning for the first time
+            activeContentWarningSetup = true;
+            alertActiveContent.querySelector('button[data-hide]').addEventListener('click', function() {
+                alertActiveContent.style.display = 'none';
             });
-        });
+            ['swModeLink', 'stop'].forEach(function(id) {
+                // Define event listeners for both hyperlinks in alert box: these take the user to the Config tab and highlight
+                // the options that the user needs to select
+                document.getElementById(id).addEventListener('click', function () {
+                    var elementID = id === 'stop' ? 'hideActiveContentWarningCheck' : 'serviceworkerModeRadio';
+                    var thisLabel = document.getElementById(elementID).parentNode;
+                    thisLabel.style.borderColor = 'red';
+                    thisLabel.style.borderStyle = 'solid';
+                    var btnHome = document.getElementById('btnHome');
+                    [thisLabel, btnHome].forEach(function (ele) {
+                        // Define event listeners to cancel the highlighting both on the highlighted element and on the Home tab
+                        ele.addEventListener('mousedown', function () {
+                            thisLabel.style.borderColor = '';
+                            thisLabel.style.borderStyle = '';
+                        });
+                    });
+                    document.getElementById('btnConfigure').click();
+                });
+            });
+        }
     }
 
     /**
@@ -153,13 +153,15 @@ define([], function() {
      * @param {String} contentType The mimetype of the downloadable file, if known
      * @param {Uint8Array} content The binary-format content of the downloadable file
      */
+    var downloadAlertSetup = false;
     function displayFileDownloadAlert(title, download, contentType, content) {
-        // We have to create the alert box in code, because Bootstrap removes it completely from the DOM when the user dismisses it
-        document.getElementById('alertBoxFooter').innerHTML =
-        '<div id="downloadAlert" class="alert alert-info alert-dismissible">' +
-        '    <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>' +
-        '    <span id="alertMessage"></span>' +
-        '</div>';
+        var downloadAlert = document.getElementById('downloadAlert');
+        downloadAlert.style.display = 'block';
+        if (!downloadAlertSetup) downloadAlert.querySelector('button[data-hide]').addEventListener('click', function() {
+            // We are setting up the alert for the first time
+            downloadAlert.style.display = 'none';
+        });
+        downloadAlertSetup = true;
         // Download code adapted from https://stackoverflow.com/a/19230668/9727685 
         // Set default contentType if none was provided
         if (!contentType) contentType = 'application/octet-stream';
@@ -211,6 +213,193 @@ define([], function() {
     }
 
     /**
+     * Encodes the html escape characters in the string before using it as html class name,id etc.
+     * 
+     * @param {String} string The string in which html characters are to be escaped
+     * 
+     */
+    function htmlEscapeChars(string) {
+        var escapechars = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+            '/': '&#x2F;',
+            '`': '&#x60;',
+            '=': '&#x3D;'
+        };
+        string = String(string).replace(/[&<>"'`=/]/g, function (s) {
+            return escapechars[s];
+        });
+        return string;
+    }
+
+    /**
+     * Removes the animation effect between various sections
+     */
+    function removeAnimationClasses() {
+        $('#about').removeClass('slideIn_L').removeClass('slideOut_R');
+        $('#configuration').removeClass('slideIn_L').removeClass('slideIn_R').removeClass('slideOut_L').removeClass('slideOut_R');
+        $('#articleContent').removeClass('slideIn_R').removeClass('slideOut_L');
+    }
+    
+    /**
+     * Adds the slide animation between different sections
+     * 
+     * @param {String} section It takes the name of the section to which the animation is to be added
+     * 
+     */
+    function applyAnimationToSection(section) {
+        if (section == 'home') {
+            if (!$('#configuration').is(':hidden')) {
+                $('#configuration').addClass('slideOut_R');
+                setTimeout(function () {
+                    $('#configuration').hide();
+                }, 300);
+            }
+            if (!$('#about').is(':hidden')) {
+                $('#about').addClass('slideOut_R');
+                setTimeout(function () {
+                    $('#about').hide();
+                }, 300);
+            }
+            $('#articleContent').addClass('slideIn_R');
+            setTimeout(function () {
+                $('#articleContent').show();
+            }, 300);
+        } else if (section == 'config') {
+            if (!$('#about').is(':hidden')) {
+                $('#about').addClass('slideOut_R');
+                $('#configuration').addClass('slideIn_R');
+                setTimeout(function () {
+                    $('#about').hide();
+                }, 300);
+            } else if (!$('#articleContent').is(':hidden')) {
+                $('#articleContent').addClass('slideOut_L');
+                $('#configuration').addClass('slideIn_L');
+                setTimeout(function () {
+                    $('#articleContent').hide();
+                }, 300);
+            }
+            setTimeout(function () {
+                $('#configuration').show();
+            }, 300);
+        } else if (section == 'about') {
+            if (!$('#configuration').is(':hidden')) {
+                $('#configuration').addClass('slideOut_L');
+                setTimeout(function () {
+                    $('#configuration').hide();
+                }, 300);
+            }
+            if (!$('#articleContent').is(':hidden')) {
+                $('#articleContent').addClass('slideOut_L');
+                setTimeout(function () {
+                    $('#articleContent').hide();
+                }, 300);
+            }
+            $('#about').addClass('slideIn_L');
+            setTimeout(function () {
+                $('#about').show();
+            }, 300);
+        }
+    }
+
+    /**
+     * Applies the requested app and content theme
+     * 
+     * A <theme> string consists of two parts, the appTheme (theme to apply to the app shell only), and an optional
+     * contentTheme beginning with an underscore: e.g. 'dark_invert' = 'dark' (appTheme) + '_invert' (contentTheme)
+     * Current themes are: light, dark, dark_invert, dark_mwInvert but code below is written for extensibility
+     * For each appTheme (except the default 'light'), a corresponding set of rules must be present in app.css
+     * For each contentTheme, a stylesheet must be provided in www/css that is named 'kiwixJS' + contentTheme
+     * A rule may additionally be needed in app.css for full implementation of contentTheme
+     * 
+     * @param {String} theme The theme to apply (light|dark[_invert|_mwInvert])
+     */
+    function applyAppTheme(theme) {
+        var htmlEl = document.querySelector('html');
+        var footer = document.querySelector('footer');
+        var oldTheme = htmlEl.dataset.theme || '';
+        var iframe = document.getElementById('articleContent');
+        var doc = iframe.contentDocument;
+        var kiwixJSSheet = doc ? doc.getElementById('kiwixJSTheme') || null : null;
+        var appTheme = theme.replace(/_.*$/, '');
+        var contentTheme = theme.replace(/^[^_]*/, '');
+        var oldAppTheme = oldTheme.replace(/_.*$/, '');
+        var oldContentTheme = oldTheme.replace(/^[^_]*/, '');
+        // Remove oldAppTheme and oldContentTheme
+        if (oldAppTheme) htmlEl.classList.remove(oldAppTheme);
+        // A missing contentTheme implies _light
+        footer.classList.remove(oldContentTheme || '_light');
+        // Apply new appTheme (NB it will not be added twice if it's already there)
+        if (appTheme) htmlEl.classList.add(appTheme);
+        // We also add the contentTheme to the footer to avoid dark css rule being applied to footer when content
+        // is not dark (but we want it applied when the content is dark or inverted)
+        footer.classList.add(contentTheme || '_light');
+        // Embed a reference to applied theme, so we can remove it generically in the future
+        htmlEl.dataset.theme = theme;
+        // Hide any previously displayed help
+        var oldHelp = document.getElementById(oldTheme + '-help');
+        if (oldHelp) oldHelp.style.display = 'none';
+        // Show any specific help for selected contentTheme
+        var help = document.getElementById(theme + '-help');
+        if (help) help.style.display = 'block';
+        
+        // If there is no ContentTheme or we are applying a different ContentTheme, remove any previously applied ContentTheme
+        if (oldContentTheme && oldContentTheme !== contentTheme) {
+            iframe.classList.remove(oldContentTheme);
+            if (kiwixJSSheet) {
+                kiwixJSSheet.disabled = true;
+                kiwixJSSheet.parentNode.removeChild(kiwixJSSheet);
+            }
+        }
+        // Apply the requested ContentTheme (if not already attached)
+        if (contentTheme && (!kiwixJSSheet || !~kiwixJSSheet.href.search('kiwixJS' + contentTheme + '.css'))) {
+            iframe.classList.add(contentTheme);
+            // Use an absolute reference because Service Worker needs this (if an article loaded in SW mode is in a ZIM
+            // subdirectory, then relative links injected into the article will not work as expected)
+            // Note that location.pathname returns the path plus the filename, but is useful because it removes any query string
+            var prefix = (window.location.protocol + '//' + window.location.host + window.location.pathname).replace(/\/[^/]*$/, '');
+            if (doc) {
+                var link = doc.createElement('link');
+                link.setAttribute('id', 'kiwixJSTheme');
+                link.setAttribute('rel', 'stylesheet');
+                link.setAttribute('type', 'text/css');
+                link.setAttribute('href', prefix + '/css/kiwixJS' + contentTheme + '.css');
+                doc.head.appendChild(link);
+            }
+        }
+        // If we are in Config and a real document has been loaded already, expose return link so user can see the result of the change
+        // DEV: The Placeholder string below matches the dummy article.html that is loaded before any articles are loaded
+        if (document.getElementById('liConfigureNav').classList.contains('active') &&
+            doc.title !== "Placeholder for injecting an article into the iframe") {
+            showReturnLink();
+        }
+    }
+
+    // Displays the return link and handles click event. Called by applyAppTheme()
+    function showReturnLink() {
+        var viewArticle = document.getElementById('viewArticle');
+        viewArticle.style.display = 'block';
+        viewArticle.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('liConfigureNav').classList.remove('active');
+            document.getElementById('liHomeNav').classList.add('active');
+            removeAnimationClasses();
+            if (params.showUIAnimations) { 
+                applyAnimationToSection('home');
+            } else {
+                document.getElementById('configuration').style.display = 'none';
+                document.getElementById('articleContent').style.display = 'block';
+            }
+            document.getElementById('navigationButtons').style.display = 'inline-flex';
+            document.getElementById('formArticleSearch').style.display = 'block';
+            viewArticle.style.display = 'none';
+        });
+    }
+
+    /**
      * Functions and classes exposed by this module
      */
     return {
@@ -220,6 +409,10 @@ define([], function() {
         removeUrlParameters: removeUrlParameters,
         displayActiveContentWarning: displayActiveContentWarning,
         displayFileDownloadAlert: displayFileDownloadAlert,
-        isElementInView: isElementInView
+        isElementInView: isElementInView,
+        htmlEscapeChars: htmlEscapeChars,
+        removeAnimationClasses: removeAnimationClasses,
+        applyAnimationToSection: applyAnimationToSection,
+        applyAppTheme: applyAppTheme
     };
 });

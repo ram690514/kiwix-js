@@ -1,36 +1,35 @@
 /**
  * tests.js : Unit tests implemented with qunit
- * 
+ *
  * Copyright 2013-2014 Mossroy and contributors
  * License GPL v3:
- * 
+ *
  * This file is part of Kiwix.
- * 
+ *
  * Kiwix is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * Kiwix is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with Kiwix (file LICENSE-GPLv3.txt).  If not, see <http://www.gnu.org/licenses/>
  */
 define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
  function($, zimArchive, zimDirEntry, util, uiUtil, utf8) {
-    
+
     var localZimArchive;
 
-    
     /**
      * Make an HTTP request for a Blob and return a Promise
-     * 
+     *
      * @param {String} url URL to download from
      * @param {String} name Name to give to the Blob instance
-     * @returns {Promise}
+     * @returns {Promise<Blob>} A Promise for the Blob
      */
     function makeBlobRequest(url, name) {
         return new Promise(function (resolve, reject) {
@@ -63,10 +62,10 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             xhr.send();
         });
     }
-    
+
     // Let's try to download the ZIM files
     var zimArchiveFiles = new Array();
-    
+
     var splitBlobs = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'].map(function(c) {
         var filename = 'wikipedia_en_ray_charles_2015-06.zima' + c;
         return makeBlobRequest('tests/' + filename, filename);
@@ -80,7 +79,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             runTests();
         });
     });
-     
+
     var runTests = function() {
 
         QUnit.module("environment");
@@ -91,7 +90,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
         QUnit.test("check archive files are read", function(assert) {
             assert.ok(zimArchiveFiles && zimArchiveFiles[0] && zimArchiveFiles[0].size > 0, "ZIM file read and not empty");
         });
-        
+
         QUnit.module("utils");
         QUnit.test("check reading an IEEE_754 float from 4 bytes" ,function(assert) {
            var byteArray = new Uint8Array(4);
@@ -104,20 +103,19 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
            var float = util.readFloatFrom4Bytes(byteArray, 0);
            assert.equal(float, -118.625, "the IEEE_754 float should be converted as -118.625");
         });
-        QUnit.test("check upper/lower case variations", function(assert) {
+        QUnit.test("check upper/lower case variations", function (assert) {
             var testString1 = "téléphone";
             var testString2 = "Paris";
             var testString3 = "le Couvre-chef Est sur le porte-manteaux";
             var testString4 = "épée";
-            assert.equal(util.ucFirstLetter(testString1), "Téléphone", "The first letter should be upper-case");
-            assert.equal(util.lcFirstLetter(testString2), "paris", "The first letter should be lower-case");
-            assert.equal(util.ucEveryFirstLetter(testString3), "Le Couvre-Chef Est Sur Le Porte-Manteaux", "The first letter of every word should be upper-case");
-            assert.equal(util.ucFirstLetter(testString4), "Épée", "The first letter should be upper-case (with accent)");
-        });
-        QUnit.test("check remove duplicates of an array of dirEntry objects", function(assert) {
-            var array = [{title:"a"}, {title:"b"}, {title:"c"}, {title:"a"}, {title:"c"}, {title:"d"}];
-            var expectedArray = [{title:"a"}, {title:"b"}, {title:"c"}, {title:"d"}];
-            assert.deepEqual(util.removeDuplicateTitlesInDirEntryArray(array), expectedArray, "Duplicates should be removed from the array");
+            var testString5 = '$￥€“«xριστός» †¡Ἀνέστη!”';
+            var testString6 = "Καλά Νερά Μαγνησίας žižek";
+            assert.equal(util.allCaseFirstLetters(testString1).indexOf("Téléphone") >= 0, true, "The first letter should be uppercase");
+            assert.equal(util.allCaseFirstLetters(testString2).indexOf("paris") >= 0, true, "The first letter should be lowercase");
+            assert.equal(util.allCaseFirstLetters(testString3).indexOf("Le Couvre-Chef Est Sur Le Porte-Manteaux") >= 0, true, "The first letter of every word should be uppercase");
+            assert.equal(util.allCaseFirstLetters(testString4).indexOf("Épée") >= 0, true, "The first letter should be uppercase (with accent)");
+            assert.equal(util.allCaseFirstLetters(testString5).indexOf('$￥€“«Xριστός» †¡ἀνέστη!”') >= 0, true, "First non-punctuation/non-currency Unicode letter should be uppercase, second (with breath mark) lowercase");
+            assert.equal(util.allCaseFirstLetters(testString6, "full").indexOf("ΚΑΛΆ ΝΕΡΆ ΜΑΓΝΗΣΊΑΣ ŽIŽEK") >= 0, true, "All Unicode letters should be uppercase");
         });
         QUnit.test("check removal of parameters in URL", function(assert) {
             var testUrl1 = "A/question.html";
@@ -129,15 +127,15 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             assert.equal(uiUtil.removeUrlParameters(testUrl3), testUrl1);
             assert.equal(uiUtil.removeUrlParameters(testUrl4), testUrl1);
         });
-        
+
         QUnit.module("ZIM initialisation");
         QUnit.test("ZIM archive is ready", function(assert) {
             assert.ok(localZimArchive.isReady() === true, "ZIM archive should be set as ready");
         });
-        
+
         QUnit.module("ZIM metadata");
         QUnit.test("read ZIM language", function(assert) {
-            var done = assert.async();            
+            var done = assert.async();
             assert.expect(1);
             var callbackFunction = function(language) {
                 assert.equal(language , 'eng', 'The language read inside the Metadata should be "eng" for "English"');
@@ -146,7 +144,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             localZimArchive.getMetadata("Language", callbackFunction);
         });
         QUnit.test("try to read a missing metadata", function(assert) {
-            var done = assert.async();            
+            var done = assert.async();
             assert.expect(1);
             var callbackFunction = function(string) {
                 assert.equal(string, undefined, 'The metadata zzz should not be found inside the ZIM');
@@ -154,7 +152,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             };
             localZimArchive.getMetadata("zzz", callbackFunction);
         });
-                
+
         QUnit.module("zim_direntry_search_and_read");
         QUnit.test("check DirEntry.fromStringId 'A Fool for You'", function(assert) {
             var done = assert.async();
@@ -171,7 +169,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             localZimArchive.readUtf8File(aFoolForYouDirEntry, callbackFunction);
         });
         QUnit.test("check findDirEntriesWithPrefix 'A'", function(assert) {
-            var done = assert.async();            
+            var done = assert.async();
             assert.expect(2);
             var callbackFunction = function(dirEntryList) {
                 assert.ok(dirEntryList && dirEntryList.length === 5, "Article list with 5 results");
@@ -179,10 +177,10 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
                 assert.equal(firstDirEntry.getTitleOrUrl() , 'A Fool for You', 'First result should be "A Fool for You"');
                 done();
             };
-            localZimArchive.findDirEntriesWithPrefix('A', 5, callbackFunction);
+            localZimArchive.findDirEntriesWithPrefix({prefix: 'A'}, 5, callbackFunction, true);
         });
         QUnit.test("check findDirEntriesWithPrefix 'a'", function(assert) {
-            var done = assert.async();            
+            var done = assert.async();
             assert.expect(2);
             var callbackFunction = function(dirEntryList) {
                 assert.ok(dirEntryList && dirEntryList.length === 5, "Article list with 5 results");
@@ -190,7 +188,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
                 assert.equal(firstDirEntry.getTitleOrUrl() , 'A Fool for You', 'First result should be "A Fool for You"');
                 done();
             };
-            localZimArchive.findDirEntriesWithPrefix('a', 5, callbackFunction);
+            localZimArchive.findDirEntriesWithPrefix({prefix: 'a'}, 5, callbackFunction, true);
         });
         QUnit.test("check findDirEntriesWithPrefix 'blues brothers'", function(assert) {
             var done = assert.async();
@@ -201,7 +199,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
                 assert.equal(firstDirEntry.getTitleOrUrl() , 'Blues Brothers (film)', 'First result should be "Blues Brothers (film)"');
                 done();
             };
-            localZimArchive.findDirEntriesWithPrefix('blues brothers', 5, callbackFunction);
+            localZimArchive.findDirEntriesWithPrefix({prefix: 'blues brothers'}, 5, callbackFunction, true);
         });
         QUnit.test("article '(The Night Time Is) The Right Time' correctly redirects to 'Night Time Is the Right Time'", function(assert) {
             var done = assert.async();
@@ -301,7 +299,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
         });
         QUnit.test("Stylesheet '-/s/style.css' can be loaded", function(assert) {
             var done = assert.async();
-            
+
             assert.expect(5);
             localZimArchive.getDirEntryByTitle("-/s/style.css").then(function(dirEntry) {
                 assert.ok(dirEntry !== null, "DirEntry found");
@@ -335,7 +333,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
                         assert.equal(data.slice(0, beginning.length), beginning, "Content starts correctly.");
                         done();
                     });
-                }   
+                }
                 else {
                     done();
                 }
@@ -361,7 +359,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
                 }
             });
         });
-        
+
         QUnit.module("zim_random_and_main_article");
         QUnit.test("check that a random article is found", function(assert) {
             var done = assert.async();
@@ -369,7 +367,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             var callbackRandomArticleFound = function(dirEntry) {
                 assert.ok(dirEntry !== null, "One DirEntry should be found");
                 assert.ok(dirEntry.getTitleOrUrl() !== null, "The random DirEntry should have a title" );
-               
+
                 done();
             };
             localZimArchive.getRandomDirEntry(callbackRandomArticleFound);
@@ -380,7 +378,7 @@ define(['jquery', 'zimArchive', 'zimDirEntry', 'util', 'uiUtil', 'utf8'],
             var callbackMainPageArticleFound = function(dirEntry) {
                 assert.ok(dirEntry !== null, "Main DirEntry should be found");
                 assert.equal(dirEntry.getTitleOrUrl(), "Summary", "The main DirEntry should be called Summary" );
-               
+
                 done();
             };
             localZimArchive.getMainPageDirEntry(callbackMainPageArticleFound);
